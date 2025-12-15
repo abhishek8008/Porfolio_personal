@@ -32,8 +32,12 @@ const Blog = () => {
         blogAPI.getTags(),
         blogAPI.getFeatured()
       ]);
-      setCategories(categoriesRes.categories || []);
-      setTags(tagsRes.tags || []);
+      // Extract category names from objects {category, count}
+      const categoryNames = (categoriesRes.categories || []).map(c => c.category || c);
+      setCategories(categoryNames);
+      // Extract tag names from objects {tag, count}
+      const tagNames = (tagsRes.tags || []).map(t => t.tag || t);
+      setTags(tagNames);
       setFeaturedBlogs(featuredRes.blogs || []);
     } catch (error) {
       console.error('Error fetching initial data:', error);

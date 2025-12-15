@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { blogAPI } from '../../services/api';
+import { uploadAPI } from '../../services/api';
 import styles from './BlogManager.module.css';
+
+const DEFAULT_AUTHOR = 'Abhishek Kumar R';
 
 const BlogManager = () => {
   const [blogs, setBlogs] = useState([]);
@@ -11,6 +14,8 @@ const BlogManager = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [previewMode, setPreviewMode] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [imageInputType, setImageInputType] = useState('url'); // 'url' or 'file'
   const [formData, setFormData] = useState({
     title: '',
     excerpt: '',
@@ -21,7 +26,8 @@ const BlogManager = () => {
     is_published: false,
     is_featured: false,
     meta_description: '',
-    author: ''
+    author: DEFAULT_AUTHOR,
+    attachments: [] // Array of {url, filename, size, type}
   });
 
   const categories = [
@@ -56,7 +62,8 @@ const BlogManager = () => {
     try {
       const blogData = {
         ...formData,
-        tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean)
+        tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+        author: formData.author || DEFAULT_AUTHOR
       };
 
       if (editingBlog) {
@@ -71,6 +78,69 @@ const BlogManager = () => {
       console.error('Error saving blog:', error);
       alert('Failed to save blog post');
     }
+  };
+
+  const handleCoverImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const response = await uploadAPI.uploadBlogImage(file);
+      setFormData(prev => ({ ...prev, cover_image: response.data.url }));
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Failed to upload image');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleAttachmentUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const response = await uploadAPI.uploadBlogAttachment(file);
+      const newAttachment = {
+        url: response.data.url,
+        filename: response.data.filename,
+        size: response.data.size,
+        type: response.data.type
+      };
+      setFormData(prev => ({
+        ...prev,
+        attachments: [...prev.attachments, newAttachment]
+      }));
+    } catch (error) {
+      console.error('Error uploading attachment:', error);
+      alert('Failed to upload attachment');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeAttachment = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      attachments: prev.attachments.filter((_, i) => i !== index)
+    }));
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const getFileIcon = (type) => {
+    if (type.includes('pdf')) return '📄';
+    if (type.includes('word') || type.includes('document')) return '📝';
+    if (type.includes('powerpoint') || type.includes('presentation')) return '📊';
+    if (type.includes('excel') || type.includes('sheet')) return '📈';
+    if (type.includes('zip')) return '📦';
+    return '📎';
   };
 
   const handleDelete = async (id) => {
@@ -108,8 +178,10 @@ const BlogManager = () => {
         is_published: blog.is_published || false,
         is_featured: blog.is_featured || false,
         meta_description: blog.meta_description || '',
-        author: blog.author || ''
+        author: blog.author || DEFAULT_AUTHOR,
+        attachments: blog.attachments || []
       });
+      setImageInputType(blog.cover_image ? 'url' : 'url');
     } else {
       setEditingBlog(null);
       setFormData({
@@ -122,8 +194,10 @@ const BlogManager = () => {
         is_published: false,
         is_featured: false,
         meta_description: '',
-        author: ''
+        author: DEFAULT_AUTHOR,
+        attachments: []
       });
+      setImageInputType('url');
     }
     setPreviewMode(false);
     setShowModal(true);
@@ -504,7 +578,7 @@ const BlogManager = () => {
                         name="author"
                         value={formData.author}
                         onChange={handleChange}
-                        placeholder="Author name"
+                        placeholder="Abhishek Kumar R"
                       />
                     </div>
 
@@ -536,15 +610,92 @@ const BlogManager = () => {
                     </div>
 
                     <div className={`${styles.formGroup} ${styles.fullWidth}`}>
-                      <label htmlFor="cover_image">Cover Image URL</label>
-                      <input
-                        type="url"
-                        id="cover_image"
-                        name="cover_image"
-                        value={formData.cover_image}
-                        onChange={handleChange}
-                        placeholder="https://example.com/image.jpg"
-                      />
+                      <label>Cover Image</label>
+                      <div className={styles.imageInputToggle}>
+                        <button
+                          type="button"
+                          className={`${styles.toggleBtn} ${imageInputType === 'url' ? styles.active : ''}`}
+                          onClick={() => setImageInputType('url')}
+                        >
+                          🔗 URL
+                        </button>
+                        <button
+                          type="button"
+                          className={`${styles.toggleBtn} ${imageInputType === 'file' ? styles.active : ''}`}
+                          onClick={() => setImageInputType('file')}
+                        >
+                          📁 Upload
+                        </button>
+                      </div>
+                      {imageInputType === 'url' ? (
+                        <input
+                          type="url"
+                          id="cover_image"
+                          name="cover_image"
+                          value={formData.cover_image}
+                          onChange={handleChange}
+                          placeholder="https://example.com/image.jpg"
+                        />
+                      ) : (
+                        <div className={styles.fileUploadWrapper}>
+                          <input
+                            type="file"
+                            id="cover_image_file"
+                            accept="image/*"
+                            onChange={handleCoverImageUpload}
+                            disabled={uploading}
+                          />
+                          <label htmlFor="cover_image_file" className={styles.fileUploadLabel}>
+                            {uploading ? 'Uploading...' : '📷 Choose Image'}
+                          </label>
+                        </div>
+                      )}
+                      {formData.cover_image && (
+                        <div className={styles.imagePreview}>
+                          <img src={formData.cover_image} alt="Cover preview" />
+                          <button
+                            type="button"
+                            className={styles.removeImageBtn}
+                            onClick={() => setFormData(prev => ({ ...prev, cover_image: '' }))}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+                      <label>Attachments (PDF, DOC, PPT, etc.)</label>
+                      <div className={styles.attachmentUpload}>
+                        <input
+                          type="file"
+                          id="attachment_file"
+                          accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip"
+                          onChange={handleAttachmentUpload}
+                          disabled={uploading}
+                        />
+                        <label htmlFor="attachment_file" className={styles.fileUploadLabel}>
+                          {uploading ? 'Uploading...' : '📎 Add Attachment'}
+                        </label>
+                      </div>
+                      {formData.attachments.length > 0 && (
+                        <div className={styles.attachmentsList}>
+                          {formData.attachments.map((att, index) => (
+                            <div key={index} className={styles.attachmentItem}>
+                              <span className={styles.attachmentIcon}>{getFileIcon(att.type)}</span>
+                              <span className={styles.attachmentName}>{att.filename}</span>
+                              <span className={styles.attachmentSize}>{formatFileSize(att.size)}</span>
+                              <button
+                                type="button"
+                                className={styles.removeAttachmentBtn}
+                                onClick={() => removeAttachment(index)}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <div className={`${styles.formGroup} ${styles.fullWidth}`}>

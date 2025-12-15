@@ -23,6 +23,33 @@ const upload = multer({
   }
 });
 
+// Multer for blog attachments (documents)
+const uploadAttachment = multer({
+  storage,
+  limits: {
+    fileSize: 20 * 1024 * 1024 // 20MB limit for documents
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain',
+      'application/zip',
+      'application/x-zip-compressed'
+    ];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Allowed: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, TXT, ZIP'));
+    }
+  }
+});
+
 // Helper function to upload to Cloudinary
 const uploadToCloudinary = (buffer, options = {}) => {
   return new Promise((resolve, reject) => {
@@ -226,6 +253,76 @@ router.delete('/:public_id', authMiddleware, adminOnly, async (req, res) => {
   } catch (error) {
     console.error('Delete file error:', error);
     res.status(500).json({ success: false, message: error.message || 'Delete failed' });
+  }
+});
+
+// @route   POST /api/upload/blog-image
+// @desc    Upload blog cover image
+// @access  Private (Admin only)
+router.post('/blog-image', authMiddleware, adminOnly, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const result = await uploadToCloudinary(req.file.buffer, {
+      folder: 'portfolio/blog',
+      resource_type: 'image',
+      transformation: [
+        { width: 1200, height: 630, crop: 'fill' },
+        { quality: 'auto:good' },
+        { fetch_format: 'auto' }
+      ]
+    });
+
+    res.json({
+      success: true,
+      message: 'Blog image uploaded successfully',
+      data: {
+        url: result.secure_url,
+        public_id: result.public_id
+      }
+    });
+  } catch (error) {
+    console.error('Upload blog image error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Upload failed' });
+  }
+});
+
+// @route   POST /api/upload/blog-attachment
+// @desc    Upload blog attachment (PDF, DOC, PPT, etc.)
+// @access  Private (Admin only)
+router.post('/blog-attachment', authMiddleware, adminOnly, uploadAttachment.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const originalName = req.file.originalname;
+    const fileExtension = originalName.split('.').pop();
+    const baseName = originalName.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9]/g, '_');
+    
+    const result = await uploadToCloudinary(req.file.buffer, {
+      folder: 'portfolio/blog-attachments',
+      resource_type: 'raw',
+      public_id: `${baseName}_${Date.now()}.${fileExtension}`,
+      use_filename: true
+    });
+
+    res.json({
+      success: true,
+      message: 'Attachment uploaded successfully',
+      data: {
+        url: result.secure_url,
+        public_id: result.public_id,
+        filename: originalName,
+        size: req.file.size,
+        type: req.file.mimetype
+      }
+    });
+  } catch (error) {
+    console.error('Upload blog attachment error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Upload failed' });
   }
 });
 

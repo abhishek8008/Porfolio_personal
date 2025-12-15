@@ -336,6 +336,44 @@ const BlogPost = () => {
             </div>
           </div>
         )}
+
+        {/* Attachments */}
+        {blog.attachments && blog.attachments.length > 0 && (
+          <div className={styles.attachments}>
+            <h3 className={styles.attachmentsTitle}>📎 Downloads & Attachments</h3>
+            <div className={styles.attachmentsList}>
+              {blog.attachments.map((attachment, index) => (
+                <a 
+                  key={index}
+                  href={attachment.url}
+                  download={attachment.filename}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.attachmentCard}
+                >
+                  <span className={styles.attachmentIcon}>
+                    {attachment.type?.includes('pdf') ? '📄' :
+                     attachment.type?.includes('word') || attachment.type?.includes('document') ? '📝' :
+                     attachment.type?.includes('powerpoint') || attachment.type?.includes('presentation') ? '📊' :
+                     attachment.type?.includes('excel') || attachment.type?.includes('sheet') ? '📈' :
+                     attachment.type?.includes('zip') ? '📦' : '📎'}
+                  </span>
+                  <div className={styles.attachmentInfo}>
+                    <span className={styles.attachmentName}>{attachment.filename}</span>
+                    <span className={styles.attachmentMeta}>
+                      {attachment.size ? `${(attachment.size / 1024 / 1024).toFixed(2)} MB` : 'Download'}
+                    </span>
+                  </div>
+                  <svg className={styles.downloadIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </motion.article>
 
       {/* Share Section */}

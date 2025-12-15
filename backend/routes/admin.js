@@ -693,7 +693,7 @@ router.post('/blogs', [
 
     const { 
       title, content, excerpt, cover_image, tags, category, 
-      is_published, is_featured, meta_description 
+      is_published, is_featured, meta_description, author, attachments
     } = req.body;
 
     const slug = generateSlug(title);
@@ -703,15 +703,17 @@ router.post('/blogs', [
     const result = await db.query(`
       INSERT INTO blogs (
         title, slug, content, excerpt, cover_image, tags, category,
-        reading_time, is_published, is_featured, meta_description, published_at
+        reading_time, is_published, is_featured, meta_description, published_at, author, attachments
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *
     `, [
       title, slug, content, excerpt, cover_image, 
       tags || [], category, reading_time, 
       is_published || false, is_featured || false, 
-      meta_description, published_at
+      meta_description, published_at,
+      author || 'Abhishek Kumar R',
+      JSON.stringify(attachments || [])
     ]);
 
     // Invalidate blog cache
@@ -731,7 +733,7 @@ router.put('/blogs/:id', async (req, res) => {
     const { id } = req.params;
     const { 
       title, content, excerpt, cover_image, tags, category,
-      is_published, is_featured, meta_description 
+      is_published, is_featured, meta_description, author, attachments
     } = req.body;
 
     // Get current blog to check publish status change
@@ -761,13 +763,15 @@ router.put('/blogs/:id', async (req, res) => {
         is_featured = COALESCE($9, is_featured),
         meta_description = COALESCE($10, meta_description),
         published_at = $11,
+        author = COALESCE($12, author),
+        attachments = COALESCE($13, attachments),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $12
+      WHERE id = $14
       RETURNING *
     `, [
       title, content, excerpt, cover_image, tags, category,
       reading_time, is_published, is_featured, meta_description,
-      published_at, id
+      published_at, author, attachments ? JSON.stringify(attachments) : null, id
     ]);
 
     // Invalidate blog cache

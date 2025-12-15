@@ -231,6 +231,44 @@ export const uploadAPI = {
     if (!response.ok) throw new Error(data.message);
     return data;
   },
+
+  uploadBlogImage: async (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const token = localStorage.getItem('adminToken');
+    const response = await fetch(`${API_BASE_URL}/upload/blog-image`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: 'include',
+      body: formData,
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message);
+    return data;
+  },
+
+  uploadBlogAttachment: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const token = localStorage.getItem('adminToken');
+    const response = await fetch(`${API_BASE_URL}/upload/blog-attachment`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: 'include',
+      body: formData,
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message);
+    return data;
+  },
 };
 
 // ==================== BLOG API ====================

@@ -574,4 +574,103 @@
   .relatedGrid {
     grid-template-columns: 1fr;
   }
+  
+  .attachments {
+    padding: 1.5rem;
+  }
+  
+  .attachmentCard {
+    padding: 1rem;
+  }
+  
+  .attachmentIcon {
+    font-size: 1.5rem;
+  }
+  
+  .attachmentName {
+    font-size: 0.85rem;
+  }
+}
+
+/* ==================== Attachments Section ==================== */
+.attachments {
+  margin-top: 3rem;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.attachmentsTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.attachmentsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.attachmentCard {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-decoration: none;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.attachmentCard:hover {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.3);
+  transform: translateX(5px);
+}
+
+.attachmentIcon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.attachmentInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.attachmentName {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.attachmentMeta {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.downloadIcon {
+  width: 24px;
+  height: 24px;
+  color: #6366f1;
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+
+.attachmentCard:hover .downloadIcon {
+  transform: translateY(3px);
 }
