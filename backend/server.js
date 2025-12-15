@@ -51,6 +51,21 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/upload', uploadRoutes);
 
+// Root route - API welcome message
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'OK',
+    message: 'Portfolio API Server',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      public: '/api/public/*',
+      auth: '/api/auth/*',
+      admin: '/api/admin/*'
+    }
+  });
+});
+
 // Health check with cache status
 app.get('/api/health', async (req, res) => {
   const cacheStats = await cache.getStats();
