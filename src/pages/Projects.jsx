@@ -1,9 +1,11 @@
 // src/pages/Projects.jsx - FULLY UPGRADED LUXURY CYBER THEME
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Github, ExternalLink, Folder, Star } from "lucide-react";
+import { publicAPI } from "../services/api";
 
-const projects = [
+// Fallback projects (used if API fails)
+const fallbackProjects = [
   {
     title: "E-Commerce Platform",
     description: "A full-stack e-commerce solution with React, Node.js, and MongoDB. Features include user authentication, payment integration, and admin dashboard.",
@@ -13,54 +15,14 @@ const projects = [
     live: "#",
     featured: true,
   },
-  {
-    title: "AI Chatbot Assistant",
-    description: "An intelligent chatbot powered by OpenAI API with natural language processing capabilities and conversation memory.",
-    image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=600&h=400&fit=crop",
-    tags: ["Python", "OpenAI", "Flask", "React"],
-    github: "https://github.com/abhishek8oo8",
-    live: "#",
-    featured: true,
-  },
-  {
-    title: "Task Management App",
-    description: "A collaborative task management application with real-time updates, drag-and-drop functionality, and team collaboration features.",
-    image: "https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=600&h=400&fit=crop",
-    tags: ["React", "Firebase", "Tailwind CSS"],
-    github: "https://github.com/abhishek8oo8",
-    live: "#",
-    featured: true,
-  },
-  {
-    title: "Weather Dashboard",
-    description: "Real-time weather application with beautiful UI, 7-day forecasts, and location-based weather updates.",
-    image: "https://images.unsplash.com/photo-1592210454359-9043f067919b?w=600&h=400&fit=crop",
-    tags: ["JavaScript", "API", "CSS3"],
-    github: "https://github.com/abhishek8oo8",
-    live: "#",
-    featured: false,
-  },
-  {
-    title: "Portfolio Website",
-    description: "A modern, responsive portfolio website with space theme, 3D animations, and smooth transitions built with React and Framer Motion.",
-    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=400&fit=crop",
-    tags: ["React", "Tailwind CSS", "Framer Motion"],
-    github: "https://github.com/abhishek8oo8",
-    live: "#",
-    featured: false,
-  },
-  {
-    title: "Social Media Analytics",
-    description: "A comprehensive analytics dashboard for social media metrics with data visualization and reporting features.",
-    image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=400&fit=crop",
-    tags: ["Python", "Django", "Chart.js"],
-    github: "https://github.com/abhishek8oo8",
-    live: "#",
-    featured: false,
-  },
 ];
 
 const ProjectCard = ({ project, index }) => {
+  // Parse tags if it's a string
+  const tags = typeof project.tags === 'string' 
+    ? project.tags.split(',').map(t => t.trim()) 
+    : (project.tags || []);
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: 60 }}
@@ -76,7 +38,7 @@ const ProjectCard = ({ project, index }) => {
 
         <div className="relative h-56 overflow-hidden">
           <img
-            src={project.image}
+            src={project.image || project.image_url || "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=400&fit=crop"}
             alt={project.title}
             className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
           />
@@ -92,7 +54,7 @@ const ProjectCard = ({ project, index }) => {
           {/* Hover Buttons */}
           <div className="absolute inset-0 flex items-center justify-center gap-8 opacity-0 group-hover:opacity-100 transition-all duration-500 backdrop-blur-sm">
             <motion.a
-              href={project.github}
+              href={project.github || project.github_url || "#"}
               target="_blank"
               rel="noopener noreferrer"
               whileHover={{ scale: 1.2, rotate: 360 }}
@@ -118,8 +80,8 @@ const ProjectCard = ({ project, index }) => {
           <div className="flex items-center justify-between">
             <Folder className="w-11 h-11 text-purple-400 drop-shadow-[0_0_20px_rgba(168,85,247,0.8)]" />
             <div className="flex gap-5">
-              <a href={project.github} className="text-gray-400 hover:text-purple-400 transition"><Github className="w-6 h-6" /></a>
-              <a href={project.live} className="text-gray-400 hover:text-cyan-400 transition"><ExternalLink className="w-6 h-6" /></a>
+              <a href={project.github || project.github_url || "#"} className="text-gray-400 hover:text-purple-400 transition"><Github className="w-6 h-6" /></a>
+              <a href={project.live || project.live_url || "#"} className="text-gray-400 hover:text-cyan-400 transition"><ExternalLink className="w-6 h-6" /></a>
             </div>
           </div>
 
@@ -132,7 +94,7 @@ const ProjectCard = ({ project, index }) => {
           </p>
 
           <div className="flex flex-wrap gap-2 pt-2">
-            {project.tags.map((tag, i) => (
+            {tags.map((tag, i) => (
               <span
                 key={i}
                 className="px-4 py-1.5 text-xs font-medium bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 rounded-full border border-purple-500/40 backdrop-blur-md"
@@ -151,6 +113,28 @@ const ProjectCard = ({ project, index }) => {
 };
 
 const Projects = () => {
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const response = await publicAPI.getProjects();
+        if (response.success && response.projects) {
+          setProjects(response.projects);
+        } else {
+          setProjects(fallbackProjects);
+        }
+      } catch (error) {
+        console.error('Failed to fetch projects:', error);
+        setProjects(fallbackProjects);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProjects();
+  }, []);
+
   return (
     <section className="relative min-h-screen bg-[#0b0014] overflow-hidden ">
       {/* Animated Nebula Background */}

@@ -1,25 +1,72 @@
-import { Mail, Phone, Github, Linkedin, MapPin, Rocket, Star } from "lucide-react";
-import { useState } from "react";
+import { Mail, Phone, Github, Linkedin, MapPin, Rocket, Star, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import styles from "./Contact.module.css";
+import { publicAPI } from "../services/api";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    subject: "",
     message: "",
   });
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState({ type: '', message: '' });
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await publicAPI.getProfile();
+        if (response.success && response.profile) {
+          setProfile(response.profile);
+        }
+      } catch (error) {
+        console.error('Failed to fetch profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  // Default values if profile not loaded
+  const contactEmail = profile?.email || 'akr393456@gmail.com';
+  const contactPhone = profile?.phone || '+91-9535563061';
+  const contactLocation = profile?.location || 'Bengaluru, Karnataka, India';
+  const githubUrl = profile?.github || 'https://github.com/abhishek8008';
+  const linkedinUrl = profile?.linkedin || 'https://linkedin.com/in/abhishek-kumar-r';
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
+    setSubmitStatus({ type: '', message: '' });
 
-    const mailtoLink = `mailto:akr393456@gmail.com?subject=Portfolio Contact from ${
-      formData.name
-    }&body=${encodeURIComponent(
-      formData.message + "\n\nFrom: " + formData.email
-    )}`;
+    try {
+      const response = await publicAPI.submitContact({
+        name: formData.name,
+        email: formData.email,
+        subject: formData.subject || 'Contact Form Submission',
+        message: formData.message
+      });
 
-    window.location.href = mailtoLink;
+      if (response.success) {
+        setSubmitStatus({
+          type: 'success',
+          message: 'Message sent successfully! I will get back to you soon.'
+        });
+        setFormData({ name: '', email: '', subject: '', message: '' });
+      }
+    } catch (error) {
+      setSubmitStatus({
+        type: 'error',
+        message: error.message || 'Failed to send message. Please try again.'
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -74,23 +121,23 @@ const Contact = () => {
               </h2>
 <div className="h-8 md:h-2" />
               <div className="space-y-5">
-                <a href="mailto:akr393456@gmail.com" className={`${styles.contactItem} flex items-center gap-4`}>
+                <a href={`mailto:${contactEmail}`} className={`${styles.contactItem} flex items-center gap-4`}>
                   <div className={styles.iconPlanet}>
                     <Mail className="w-5 h-5 text-orange-400" />
                   </div>
                   <div>
                     <p className="font-rajdhani text-sm text-white/50 uppercase tracking-wider">Email Transmission</p>
-                    <p className="font-space text-white">akr393456@gmail.com</p>
+                    <p className="font-space text-white">{contactEmail}</p>
                   </div>
                 </a>
 
-                <a href="tel:+919535563061" className={`${styles.contactItem} flex items-center gap-4`}>
+                <a href={`tel:${contactPhone.replace(/[^+\d]/g, '')}`} className={`${styles.contactItem} flex items-center gap-4`}>
                   <div className={styles.iconPlanet}>
                     <Phone className="w-5 h-5 text-orange-400" />
                   </div>
                   <div>
                     <p className="font-rajdhani text-sm text-white/50 uppercase tracking-wider">Direct Line</p>
-                    <p className="font-space text-white">+91-9535563061</p>
+                    <p className="font-space text-white">{contactPhone}</p>
                   </div>
                 </a>
 
@@ -100,7 +147,7 @@ const Contact = () => {
                   </div>
                   <div>
                     <p className="font-rajdhani text-sm text-white/50 uppercase tracking-wider">Base Station</p>
-                    <p className="font-space text-white">Bengaluru, Karnataka, India</p>
+                    <p className="font-space text-white">{contactLocation}</p>
                   </div>
                 </div>
               </div>
@@ -114,7 +161,7 @@ const Contact = () => {
                  <div className="h-8 md:h-2" />
                 <div className="flex gap-5 justify-center items-center">
                   <a
-                    href="https://github.com/abhishek8008"
+                    href={githubUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={styles.socialPlanet}
@@ -122,7 +169,7 @@ const Contact = () => {
                     <Github className="w-6 h-6 text-white/70 hover:text-orange-400 transition-colors" />
                   </a>
                   <a
-                    href="https://linkedin.com/in/abhishek-kumar-r"
+                    href={linkedinUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={styles.socialPlanet}
@@ -143,43 +190,72 @@ const Contact = () => {
                   <h3 className="font-orbitron text-xl font-bold text-white">Send Transmission</h3>
                 </div>
                  <div className="h-8 md:h-2" />
-              <div className={`${styles.cosmicCard} p-8 lg:min-w-[520px] lg:w-[550px]`}>
-               
+              <div className={styles.formCard}>
+                {/* Status Message */}
+                {submitStatus.message && (
+                  <div className={`${styles.statusMessage} ${submitStatus.type === 'success' ? styles.successMessage : styles.errorMessage}`}>
+                    {submitStatus.type === 'success' ? (
+                      <CheckCircle className="w-5 h-5" />
+                    ) : (
+                      <AlertCircle className="w-5 h-5" />
+                    )}
+                    <span>{submitStatus.message}</span>
+                  </div>
+                )}
 
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  
-                  
-                  <div>
-                     <div className="h-8 md:h-2" />
-                    <label className="font-rajdhani text-sm text-white/50 uppercase tracking-wider mb-2 block ml-1">
-                      Callsign
+                <form onSubmit={handleSubmit} className={styles.contactForm}>
+                  <div className={styles.formRow}>
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>
+                        <span className={styles.labelIcon}>01</span>
+                        Callsign
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        required
+                        className={styles.formInput}
+                        placeholder="Your name..."
+                      />
+                      <div className={styles.inputGlow} />
+                    </div>
+
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>
+                        <span className={styles.labelIcon}>02</span>
+                        Frequency
+                      </label>
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        required
+                        className={styles.formInput}
+                        placeholder="your@email.com"
+                      />
+                      <div className={styles.inputGlow} />
+                    </div>
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label className={styles.formLabel}>
+                      <span className={styles.labelIcon}>03</span>
+                      Subject Line
                     </label>
                     <input
                       type="text"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
-                      className={styles.cosmicInput}
-                      placeholder="Your name..."
+                      value={formData.subject}
+                      onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                      className={styles.formInput}
+                      placeholder="What's this about?"
                     />
+                    <div className={styles.inputGlow} />
                   </div>
 
-                  <div>
-                    <label className="font-rajdhani text-sm text-white/50 uppercase tracking-wider mb-2 block ml-1">
-                      Communication Frequency
-                    </label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      required
-                      className={styles.cosmicInput}
-                      placeholder="your@email.com"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="font-rajdhani text-sm text-white/50 uppercase tracking-wider mb-2 block ml-1">
+                  <div className={styles.formGroup}>
+                    <label className={styles.formLabel}>
+                      <span className={styles.labelIcon}>04</span>
                       Message Payload
                     </label>
                     <textarea
@@ -187,14 +263,29 @@ const Contact = () => {
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                       required
                       rows={5}
-                      className={`${styles.cosmicInput} resize-none`}
+                      className={`${styles.formInput} ${styles.formTextarea}`}
                       placeholder="Your message to the cosmos..."
                     />
+                    <div className={styles.inputGlow} />
                   </div>
 
-                  <button type="submit" className={styles.launchButton}>
-                    <Rocket className="w-5 h-5" />
-                    Launch Message
+                  <button 
+                    type="submit" 
+                    className={styles.submitButton}
+                    disabled={submitting}
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Transmitting...
+                      </>
+                    ) : (
+                      <>
+                        <Rocket className="w-5 h-5" />
+                        Launch Message
+                      </>
+                    )}
+                    <div className={styles.buttonGlow} />
                   </button>
                 </form>
               </div>

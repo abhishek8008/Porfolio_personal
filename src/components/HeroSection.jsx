@@ -58,12 +58,16 @@ function Scene() {
   );
 }
 
-export default function HeroSection() {
+export default function HeroSection({ profile }) {
   const socialLinks = [
-    { name: "GitHub", url: "https://github.com/abhishek8oo8", icon: Github },
-    { name: "LinkedIn", url: "https://linkedin.com/in/abhishek-kumar-r", icon: Linkedin },
-    { name: "Email", url: "mailto:akr393456@gmail.com", icon: Mail },
+    { name: "GitHub", url: profile?.github || "https://github.com/abhishek8oo8", icon: Github },
+    { name: "LinkedIn", url: profile?.linkedin || "https://linkedin.com/in/abhishek-kumar-r", icon: Linkedin },
+    { name: "Email", url: `mailto:${profile?.email || "akr393456@gmail.com"}`, icon: Mail },
   ];
+
+  // Extract first name from profile name
+  const firstName = profile?.name?.split(' ')[0] || 'Abhishek';
+  const title = profile?.title || 'Full Stack Developer';
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -104,7 +108,7 @@ export default function HeroSection() {
           >
             <span className="text-white">I&apos;m </span>
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400">
-              Abhishek
+              {firstName}
             </span>
           </motion.h1>
 
@@ -115,7 +119,7 @@ export default function HeroSection() {
             transition={{ delay: 0.7 }}
           >
             <h2 className="text-2xl md:text-4xl font-semibold text-white mb-5">
-              Full Stack Developer
+              {title}
             </h2>
             <p className="text-lg text-slate-300 max-w-xl mx-auto leading-relaxed">
               Crafting{" "}

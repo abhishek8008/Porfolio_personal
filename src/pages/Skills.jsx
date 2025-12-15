@@ -1,10 +1,11 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { Code2, Database, Users, Sparkles } from "lucide-react";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Code2, Database, Users, Sparkles, FileText, X, Download, ExternalLink } from "lucide-react";
 import styles from "./Skills.module.css";
+import { publicAPI } from "../services/api";
 
-// Skill data
-const skillCategories = [
+// Fallback skill data (used if API fails)
+const fallbackSkillCategories = [
   {
     title: "Languages",
     icon: Code2,
@@ -50,6 +51,14 @@ const skillCategories = [
     ]
   }
 ];
+
+// Map category names to icons and colors
+const categoryConfig = {
+  "Languages": { icon: Code2, color: "indigo" },
+  "Frameworks": { icon: Sparkles, color: "purple" },
+  "Tools & Platforms": { icon: Database, color: "pink" },
+  "Soft Skills": { icon: Users, color: "cyan" },
+};
 
 // Color mappings for skill cards
 const cardColorClasses = {
@@ -183,6 +192,79 @@ const CategorySection = ({ category, index }) => {
 };
 
 const Skills = () => {
+  const [skillCategories, setSkillCategories] = useState(fallbackSkillCategories);
+  const [loading, setLoading] = useState(true);
+  const [resumeUrl, setResumeUrl] = useState('');
+  const [showResumeModal, setShowResumeModal] = useState(false);
+
+  useEffect(() => {
+    const fetchSkills = async () => {
+      try {
+        const response = await publicAPI.getSkills();
+        if (response.success && response.skills && response.skills.length > 0) {
+          // Group skills by category
+          const grouped = {};
+          response.skills.forEach(skill => {
+            const category = skill.category || 'Other';
+            if (!grouped[category]) {
+              grouped[category] = [];
+            }
+            grouped[category].push({
+              name: skill.name,
+              icon: skill.icon_url || null,
+              emoji: skill.emoji || null,
+              proficiency: skill.proficiency
+            });
+          });
+
+          // Convert to array format with icons and colors
+          const categories = Object.entries(grouped).map(([title, skills]) => {
+            const config = categoryConfig[title] || { icon: Code2, color: 'indigo' };
+            return {
+              title,
+              icon: config.icon,
+              color: config.color,
+              skills
+            };
+          });
+
+          // Sort categories in preferred order
+          const order = ['Languages', 'Frameworks', 'Tools & Platforms', 'Soft Skills'];
+          categories.sort((a, b) => {
+            const aIndex = order.indexOf(a.title);
+            const bIndex = order.indexOf(b.title);
+            if (aIndex === -1 && bIndex === -1) return 0;
+            if (aIndex === -1) return 1;
+            if (bIndex === -1) return -1;
+            return aIndex - bIndex;
+          });
+
+          setSkillCategories(categories);
+        }
+      } catch (error) {
+        console.error('Failed to fetch skills:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSkills();
+  }, []);
+
+  // Fetch resume URL from profile
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await publicAPI.getProfile();
+        if (response.success && response.profile?.resume_url) {
+          setResumeUrl(response.profile.resume_url);
+        }
+      } catch (error) {
+        console.error('Failed to fetch profile:', error);
+      }
+    };
+    fetchProfile();
+  }, []);
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
@@ -193,10 +275,15 @@ const Skills = () => {
     visible: { opacity: 1, y: 0 }
   };
 
+  // Calculate stats from actual data
+  const languageCount = skillCategories.find(c => c.title === 'Languages')?.skills.length || 0;
+  const frameworkCount = skillCategories.find(c => c.title === 'Frameworks')?.skills.length || 0;
+  const toolCount = skillCategories.find(c => c.title === 'Tools & Platforms')?.skills.length || 0;
+
   const stats = [
-    { label: "Languages", value: "4+", colorClass: styles.statValueOrange },
-    { label: "Frameworks", value: "4+", colorClass: styles.statValueYellow },
-    { label: "Tools", value: "4+", colorClass: styles.statValueAmber },
+    { label: "Languages", value: `${languageCount}+`, colorClass: styles.statValueOrange },
+    { label: "Frameworks", value: `${frameworkCount}+`, colorClass: styles.statValueYellow },
+    { label: "Tools", value: `${toolCount}+`, colorClass: styles.statValueAmber },
     { label: "Projects", value: "10+", colorClass: styles.statValueCyan },
   ];
 
@@ -286,13 +373,78 @@ const Skills = () => {
                   →
                 </motion.span>
               </a>
-              <a href="/contact" className={styles.ctaSecondary}>
-                Get In Touch
-              </a>
+              <button 
+                onClick={() => resumeUrl ? setShowResumeModal(true) : alert('Resume not available yet!')} 
+                className={styles.ctaSecondary}
+              >
+                <FileText size={18} />
+                View Resume
+              </button>
             </div>
           </motion.div>
         </motion.div>
       </div>
+
+      {/* Resume Preview Modal */}
+      <AnimatePresence>
+        {showResumeModal && resumeUrl && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className={styles.modalOverlay}
+            onClick={() => setShowResumeModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className={styles.resumeModal}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={styles.modalHeader}>
+                <h3 className={styles.modalTitle}>
+                  <FileText size={20} />
+                  My Resume
+                </h3>
+                <div className={styles.modalActions}>
+                  <a 
+                    href={resumeUrl} 
+                    download 
+                    className={styles.modalBtn}
+                    title="Download Resume"
+                  >
+                    <Download size={18} />
+                  </a>
+                  <a 
+                    href={resumeUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className={styles.modalBtn}
+                    title="Open in New Tab"
+                  >
+                    <ExternalLink size={18} />
+                  </a>
+                  <button 
+                    onClick={() => setShowResumeModal(false)} 
+                    className={styles.modalCloseBtn}
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+              <div className={styles.modalBody}>
+                <iframe
+                  src={`https://docs.google.com/viewer?url=${encodeURIComponent(resumeUrl)}&embedded=true`}
+                  className={styles.resumeIframe}
+                  title="Resume Preview"
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

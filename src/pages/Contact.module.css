@@ -277,6 +277,269 @@
 /* ==================== */
 /* Form Elements */
 /* ==================== */
+
+/* New Form Card */
+.formCard {
+  background: linear-gradient(145deg, rgba(20, 15, 40, 0.95) 0%, rgba(15, 25, 45, 0.9) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 150, 100, 0.15);
+  border-radius: 24px;
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+  min-width: 320px;
+  max-width: 550px;
+  width: 100%;
+  box-shadow: 
+    0 25px 80px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(255, 100, 50, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.formCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 150, 100, 0.5), transparent);
+}
+
+.formCard::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at center, rgba(255, 100, 50, 0.03) 0%, transparent 50%);
+  animation: formGlow 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes formGlow {
+  0%, 100% { opacity: 0.5; transform: translate(0, 0); }
+  50% { opacity: 1; transform: translate(5%, 5%); }
+}
+
+/* Status Messages */
+.statusMessage {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.9rem;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.successMessage {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #4ade80;
+}
+
+.errorMessage {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+/* Contact Form */
+.contactForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 600px) {
+  .formRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.formGroup {
+  position: relative;
+}
+
+.formLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 0.5rem;
+  margin-left: 0.25rem;
+}
+
+.labelIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: linear-gradient(135deg, rgba(255, 150, 100, 0.2) 0%, rgba(255, 100, 50, 0.1) 100%);
+  border: 1px solid rgba(255, 150, 100, 0.3);
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #ff9966;
+}
+
+.formInput {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: rgba(10, 10, 30, 0.6);
+  border: 1px solid rgba(255, 150, 100, 0.15);
+  border-radius: 12px;
+  color: #fff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.formInput::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.formInput:focus {
+  outline: none;
+  border-color: rgba(255, 150, 100, 0.5);
+  background: rgba(15, 15, 40, 0.8);
+  box-shadow: 
+    0 0 0 3px rgba(255, 150, 100, 0.1),
+    0 0 30px rgba(255, 100, 50, 0.1),
+    inset 0 0 20px rgba(255, 150, 100, 0.03);
+}
+
+.formTextarea {
+  resize: none;
+  min-height: 140px;
+}
+
+.inputGlow {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #ff9966, transparent);
+  transition: width 0.3s ease;
+  border-radius: 2px;
+}
+
+.formGroup:focus-within .inputGlow {
+  width: 80%;
+}
+
+/* Submit Button */
+.submitButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 1rem 2rem;
+  margin-top: 0.5rem;
+  background: linear-gradient(135deg, #ff6633 0%, #ff9966 50%, #ffcc80 100%);
+  background-size: 200% 200%;
+  border: none;
+  border-radius: 12px;
+  color: #0a0a1a;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  transition: all 0.4s ease;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.submitButton::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transition: left 0.6s ease;
+}
+
+.submitButton:hover::before {
+  left: 100%;
+}
+
+.submitButton:hover {
+  background-position: 100% 50%;
+  transform: translateY(-3px);
+  box-shadow: 
+    0 15px 40px rgba(255, 100, 50, 0.4),
+    0 0 60px rgba(255, 150, 100, 0.2),
+    0 0 100px rgba(255, 100, 50, 0.1);
+}
+
+.submitButton:active {
+  transform: translateY(-1px);
+}
+
+.submitButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.submitButton:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.buttonGlow {
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, #ff6633, #ff9966, #ffcc80, #ff6633);
+  background-size: 300% 300%;
+  border-radius: 14px;
+  z-index: -1;
+  opacity: 0;
+  filter: blur(15px);
+  transition: opacity 0.4s ease;
+  animation: gradientShift 4s ease infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.submitButton:hover .buttonGlow {
+  opacity: 0.6;
+}
+
 .cosmicInput {
   width: 100%;
   padding: 1rem 1.25rem;

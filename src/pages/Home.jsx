@@ -2,10 +2,29 @@ import HeroSection from '../components/HeroSection';
 import SolarSystem from '../components/SolarSystem';
 import profileImg from '../assets/image.png';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { publicAPI } from '../services/api';
 
 const Home = () => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await publicAPI.getProfile();
+        if (response.success && response.profile) {
+          setProfile(response.profile);
+        }
+      } catch (error) {
+        console.error('Failed to fetch profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const handleMouseMove = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -76,8 +95,8 @@ const Home = () => {
                 
                 <div className="w-full h-full rounded-full overflow-hidden bg-slate-900 shadow-2xl">
                   <motion.img 
-                    src={profileImg} 
-                    alt="Abhishek Kumar R" 
+                    src={profile?.profile_pic || profileImg} 
+                    alt={profile?.name || "Abhishek Kumar R"} 
                     className="w-full h-full object-cover"
                     style={{
                       transform: `translateZ(50px) scale(1.05)`,
@@ -153,7 +172,7 @@ const Home = () => {
           
           {/* Right Side - Welcome Message */}
           <div className="order-1 lg:order-2 flex items-center justify-center lg:justify-center">
-            <HeroSection />
+            <HeroSection profile={profile} />
           </div>
         </div>
       </div>
