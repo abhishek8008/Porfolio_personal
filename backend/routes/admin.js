@@ -628,4 +628,209 @@ router.delete('/education/:id', async (req, res) => {
   }
 });
 
+// ==================== BLOGS ====================
+
+// Helper: Generate slug from title
+const generateSlug = (title) => {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+    + '-' + Date.now().toString(36);
+};
+
+// Helper: Calculate reading time
+const calculateReadingTime = (content) => {
+  const wordsPerMinute = 200;
+  const words = content.replace(/<[^>]*>/g, '').replace(/[#*`]/g, '').split(/\s+/).length;
+  return Math.ceil(words / wordsPerMinute) || 1;
+};
+
+// @route   GET /api/admin/blogs
+// @desc    Get all blogs (including drafts)
+router.get('/blogs', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT * FROM blogs 
+      ORDER BY created_at DESC
+    `);
+    res.json({ success: true, blogs: result.rows });
+  } catch (error) {
+    console.error('Get blogs error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   GET /api/admin/blogs/:id
+// @desc    Get single blog by ID
+router.get('/blogs/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await db.query('SELECT * FROM blogs WHERE id = $1', [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Blog not found' });
+    }
+
+    res.json({ success: true, blog: result.rows[0] });
+  } catch (error) {
+    console.error('Get blog error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   POST /api/admin/blogs
+// @desc    Create new blog
+router.post('/blogs', [
+  body('title').notEmpty().trim(),
+  body('content').notEmpty()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    const { 
+      title, content, excerpt, cover_image, tags, category, 
+      is_published, is_featured, meta_description 
+    } = req.body;
+
+    const slug = generateSlug(title);
+    const reading_time = calculateReadingTime(content);
+    const published_at = is_published ? new Date() : null;
+
+    const result = await db.query(`
+      INSERT INTO blogs (
+        title, slug, content, excerpt, cover_image, tags, category,
+        reading_time, is_published, is_featured, meta_description, published_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      RETURNING *
+    `, [
+      title, slug, content, excerpt, cover_image, 
+      tags || [], category, reading_time, 
+      is_published || false, is_featured || false, 
+      meta_description, published_at
+    ]);
+
+    // Invalidate blog cache
+    await cache.delByPattern('portfolio:blogs:*');
+
+    res.status(201).json({ success: true, blog: result.rows[0] });
+  } catch (error) {
+    console.error('Create blog error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   PUT /api/admin/blogs/:id
+// @desc    Update blog
+router.put('/blogs/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      title, content, excerpt, cover_image, tags, category,
+      is_published, is_featured, meta_description 
+    } = req.body;
+
+    // Get current blog to check publish status change
+    const currentBlog = await db.query('SELECT is_published, published_at FROM blogs WHERE id = $1', [id]);
+    if (currentBlog.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Blog not found' });
+    }
+
+    const reading_time = content ? calculateReadingTime(content) : undefined;
+    
+    // Set published_at if publishing for first time
+    let published_at = currentBlog.rows[0].published_at;
+    if (is_published && !currentBlog.rows[0].is_published) {
+      published_at = new Date();
+    }
+
+    const result = await db.query(`
+      UPDATE blogs SET
+        title = COALESCE($1, title),
+        content = COALESCE($2, content),
+        excerpt = COALESCE($3, excerpt),
+        cover_image = COALESCE($4, cover_image),
+        tags = COALESCE($5, tags),
+        category = COALESCE($6, category),
+        reading_time = COALESCE($7, reading_time),
+        is_published = COALESCE($8, is_published),
+        is_featured = COALESCE($9, is_featured),
+        meta_description = COALESCE($10, meta_description),
+        published_at = $11,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $12
+      RETURNING *
+    `, [
+      title, content, excerpt, cover_image, tags, category,
+      reading_time, is_published, is_featured, meta_description,
+      published_at, id
+    ]);
+
+    // Invalidate blog cache
+    await cache.delByPattern('portfolio:blogs:*');
+
+    res.json({ success: true, blog: result.rows[0] });
+  } catch (error) {
+    console.error('Update blog error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   DELETE /api/admin/blogs/:id
+// @desc    Delete blog
+router.delete('/blogs/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await db.query('DELETE FROM blogs WHERE id = $1 RETURNING *', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Blog not found' });
+    }
+
+    // Invalidate blog cache
+    await cache.delByPattern('portfolio:blogs:*');
+
+    res.json({ success: true, message: 'Blog deleted' });
+  } catch (error) {
+    console.error('Delete blog error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   PUT /api/admin/blogs/:id/publish
+// @desc    Toggle publish status
+router.put('/blogs/:id/publish', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { is_published } = req.body;
+
+    const published_at = is_published ? new Date() : null;
+
+    const result = await db.query(`
+      UPDATE blogs SET 
+        is_published = $1,
+        published_at = COALESCE(published_at, $2),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $3
+      RETURNING *
+    `, [is_published, published_at, id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Blog not found' });
+    }
+
+    // Invalidate blog cache
+    await cache.delByPattern('portfolio:blogs:*');
+
+    res.json({ success: true, blog: result.rows[0] });
+  } catch (error) {
+    console.error('Toggle publish error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 module.exports = router;

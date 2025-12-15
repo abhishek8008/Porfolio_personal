@@ -5,6 +5,8 @@ import About from './pages/About';
 import Projects from './pages/Projects';
 import Contact from './pages/Contact';
 import Skills from './pages/Skills';
+import Blog from './pages/Blog';
+import BlogPost from './pages/BlogPost';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -15,6 +17,7 @@ import CertificatesManager from './pages/admin/CertificatesManager';
 import SkillsManager from './pages/admin/SkillsManager';
 import EducationManager from './pages/admin/EducationManager';
 import MessagesManager from './pages/admin/MessagesManager';
+import BlogManager from './pages/admin/BlogManager';
 import { Mail, BarChart3 } from 'lucide-react';
 
 // Protected Route wrapper
@@ -45,6 +48,8 @@ function AppContent() {
       <Route path="/skills" element={<Layout><Skills /></Layout>} />
       <Route path="/projects" element={<Layout><Projects /></Layout>} />
       <Route path="/contact" element={<Layout><Contact /></Layout>} />
+      <Route path="/blog" element={<Layout><Blog /></Layout>} />
+      <Route path="/blog/:slug" element={<Layout><BlogPost /></Layout>} />
       
       {/* Admin Routes */}
       <Route path="/admin/login" element={<AdminLogin />} />
@@ -64,6 +69,7 @@ function AppContent() {
         <Route path="certificates" element={<CertificatesManager />} />
         <Route path="education" element={<EducationManager />} />
         <Route path="messages" element={<MessagesManager />} />
+        <Route path="blog" element={<BlogManager />} />
         <Route path="stats" element={<StatsManager />} />
       </Route>
     </Routes>

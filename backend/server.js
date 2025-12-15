@@ -8,6 +8,7 @@ const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const publicRoutes = require('./routes/public');
 const uploadRoutes = require('./routes/upload');
+const blogRoutes = require('./routes/blog');
 
 // Import Redis
 const { connectRedis, cache } = require('./config/redis');
@@ -50,6 +51,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/blogs', blogRoutes);
 
 // Root route - API welcome message
 app.get('/', (req, res) => {

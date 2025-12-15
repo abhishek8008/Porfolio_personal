@@ -233,4 +233,45 @@ export const uploadAPI = {
   },
 };
 
-export default { authAPI, adminAPI, publicAPI, uploadAPI };
+// ==================== BLOG API ====================
+export const blogAPI = {
+  // Public methods
+  getAll: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiCall(`/blogs${query ? `?${query}` : ''}`);
+  },
+  
+  getFeatured: () => apiCall('/blogs/featured'),
+  
+  getBySlug: (slug) => apiCall(`/blogs/${slug}`),
+  
+  getCategories: () => apiCall('/blogs/categories'),
+  
+  getTags: () => apiCall('/blogs/tags'),
+
+  // Admin methods
+  adminGetAll: () => apiCall('/admin/blogs'),
+  
+  adminGetById: (id) => apiCall(`/admin/blogs/${id}`),
+  
+  create: (data) => apiCall('/admin/blogs', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  
+  update: (id, data) => apiCall(`/admin/blogs/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  
+  delete: (id) => apiCall(`/admin/blogs/${id}`, {
+    method: 'DELETE',
+  }),
+  
+  togglePublish: (id, is_published) => apiCall(`/admin/blogs/${id}/publish`, {
+    method: 'PUT',
+    body: JSON.stringify({ is_published }),
+  }),
+};
+
+export default { authAPI, adminAPI, publicAPI, uploadAPI, blogAPI };
