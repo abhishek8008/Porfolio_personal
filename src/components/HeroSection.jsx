@@ -121,13 +121,14 @@ export default function HeroSection({ profile }) {
           </motion.div>
 
           {/* CTA Buttons */}
+          <div className="h-5 md:h-2"/>
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.9 }}
             className="mt-8 sm:mt-10 lg:mt-12"
           >
-            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 justify-center lg:justify-start">
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 justify-center lg:justify-start ">
               <Link to="/projects" className="w-full sm:w-auto">
                 <button className="group w-full sm:w-auto px-8 sm:px-10 py-3 sm:py-4 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-400 rounded-full font-semibold text-white flex items-center gap-3 justify-center hover:scale-105 transition-all shadow-lg shadow-purple-500/40 border-2 border-pink-300/70">
                   Explore Projects
@@ -145,6 +146,7 @@ export default function HeroSection({ profile }) {
           </motion.div>
 
           {/* Social Icons */}
+          <div className="h-3 md:h-3" />
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

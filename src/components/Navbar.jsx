@@ -187,7 +187,7 @@ export default function Navbar() {
                 to="/contact"
                 className="px-4 py-2 rounded-full text-white text-xs md:text-sm
                   bg-gradient-to-r from-purple-500 via-pink-500 to-orange-400 font-semibold
-                  shadow-md shadow-purple-500/40 hover:scale-[1.03] transition-transform flex items-center gap-1.5 justify-center"
+                  shadow-md shadow-purple-500/40 hover:scale-[1.03] transition-transform flex items-center gap-1.5 justify-center w-25 h-6"
               >
                 <Mail size={14} /> Let&apos;s Talk
             </NavLink>
