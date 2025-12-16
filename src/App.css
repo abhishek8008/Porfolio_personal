@@ -2,3 +2,30 @@
 #root {
   min-height: 100vh;
 }
+
+/* ==================== */
+/* Mobile Profile Image Fix */
+/* ==================== */
+@media (max-width: 1023px) {
+  /* Force profile section down on mobile/tablet */
+  .home-profile-section {
+    margin-top: 4rem !important;
+    padding-top: 3rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Extra spacing on small mobile */
+  .home-profile-section {
+    margin-top: 5rem !important;
+    padding-top: 4rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Even more spacing on very small screens */
+  .home-profile-section {
+    margin-top: 6rem !important;
+    padding-top: 4rem !important;
+  }
+}

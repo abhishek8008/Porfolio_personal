@@ -45,14 +45,6 @@ function Scene() {
       <ambientLight intensity={0.5} />
       <pointLight position={[10, 10, 10]} intensity={1} />
       <pointLight position={[-10, -10, -10]} intensity={0.5} color="#8b5cf6" />
-
-      {/* Orbs are optional – keep commented if you like cleaner bg */}
-      {/*
-      <SkillOrb position={[-5, -3, -2]} color="#00ff88" />
-      <SkillOrb position={[3, -1, -1]} color="#ff0080" delay={1} />
-      <SkillOrb position={[0, 3, -2]} color="#00d4ff" delay={2} />
-      */}
-
       <OrbitControls enableZoom={false} autoRotate autoRotateSpeed={0.5} />
     </>
   );
@@ -70,31 +62,31 @@ export default function HeroSection({ profile }) {
   const title = profile?.title || 'Full Stack Developer';
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      {/* 3D Canvas Background */}
-      <div className="absolute inset-0 pointer-events-auto">
+    <div className="relative w-full">
+      {/* 3D Canvas Background - Hidden on small mobile for performance */}
+      <div className="absolute inset-0 pointer-events-auto hidden sm:block">
         <Canvas camera={{ position: [0, 0, 8], fov: 60 }}>
           <Scene />
         </Canvas>
       </div>
 
-      {/* Content Overlay */}
-      <div className="relative z-10 container mx-auto px-6 pt-32 pb-10 flex flex-col items-center justify-center min-h-screen">
+      {/* Content */}
+      <div className="relative z-10 w-full">
         <motion.div
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, ease: "easeOut" }}
-          className="text-center max-w-3xl"
+          className="text-center lg:text-left"
         >
           {/* Badge */}
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 mb-8 w-55 justify-center h-8"
+            className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 mb-6 sm:mb-8"
           >
-            <Sparkles className="w-5 h-5 text-purple-400" />
-            <span className="text-sm font-medium text-purple-300">
+            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
+            <span className="text-xs sm:text-sm font-medium text-purple-300">
               Welcome to my Universe
             </span>
           </motion.div>
@@ -104,7 +96,7 @@ export default function HeroSection({ profile }) {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="text-5xl md:text-7xl font-bold font-poppins leading-tight mb-6"
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold font-poppins leading-tight mb-4 sm:mb-6"
           >
             <span className="text-white">I&apos;m </span>
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400">
@@ -118,10 +110,10 @@ export default function HeroSection({ profile }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7 }}
           >
-            <h2 className="text-2xl md:text-4xl font-semibold text-white mb-5">
+            <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold text-white mb-4 sm:mb-5">
               {title}
             </h2>
-            <p className="text-lg text-slate-300 max-w-xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-lg text-slate-300 max-w-xl mx-auto lg:mx-0 leading-relaxed">
               Crafting{" "}
               <span className="text-cyan-400 font-medium">modern web experiences</span> with clean
               code, cutting-edge tech, and a passion for turning ideas into reality.
@@ -129,23 +121,22 @@ export default function HeroSection({ profile }) {
           </motion.div>
 
           {/* CTA Buttons */}
-          <div className="h-2" />
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.9 }}
-            className="mt-12"
+            className="mt-8 sm:mt-10 lg:mt-12"
           >
-            <div className="flex flex-wrap items-center gap-8 justify-center">
-              <Link to="/projects">
-                <button className="group px-14 py-6 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-400 rounded-full font-semibold text-white flex items-center gap-5 hover:scale-110 transition-all shadow-lg shadow-purple-500/40 border-2 border-pink-300/70 h-8 w-45 justify-center">
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 justify-center lg:justify-start">
+              <Link to="/projects" className="w-full sm:w-auto">
+                <button className="group w-full sm:w-auto px-8 sm:px-10 py-3 sm:py-4 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-400 rounded-full font-semibold text-white flex items-center gap-3 justify-center hover:scale-105 transition-all shadow-lg shadow-purple-500/40 border-2 border-pink-300/70">
                   Explore Projects
                   <Zap className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </button>
               </Link>
 
-              <Link to="/contact">
-                <button className="px-10 py-10 border-2 border-purple-500/70 rounded-full font-semibold text-white hover:bg-purple-500/20 transition-all backdrop-blur-md flex items-center gap-4 h-8 w-32 justify-center">
+              <Link to="/contact" className="w-full sm:w-auto">
+                <button className="w-full sm:w-auto px-8 sm:px-10 py-3 sm:py-4 border-2 border-purple-500/70 rounded-full font-semibold text-white hover:bg-purple-500/20 transition-all backdrop-blur-md flex items-center gap-3 justify-center">
                   Let&apos;s Talk
                   <Globe className="w-5 h-5" />
                 </button>
@@ -153,15 +144,12 @@ export default function HeroSection({ profile }) {
             </div>
           </motion.div>
 
-          {/* Spacer to push icons further down */}
-          <div className="h-5" />
-
           {/* Social Icons */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.2 }}
-            className="flex gap-8 justify-center"
+            className="mt-8 sm:mt-10 flex gap-4 sm:gap-6 justify-center lg:justify-start"
           >
             {socialLinks.map((social) => (
               <a
@@ -169,9 +157,9 @@ export default function HeroSection({ profile }) {
                 href={social.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white/20 hover:scale-110 transition-all cursor-pointer border border-white/20"
+                className="w-12 h-12 sm:w-14 sm:h-14 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white/20 hover:scale-110 transition-all cursor-pointer border border-white/20"
               >
-                <social.icon className="w-6 h-6 text-slate-300" />
+                <social.icon className="w-5 h-5 sm:w-6 sm:h-6 text-slate-300" />
               </a>
             ))}
           </motion.div>

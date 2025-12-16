@@ -124,13 +124,13 @@ const Footer = () => {
   };
 
   return (
-    <footer className="relative z-10 bg-gradient-to-t from-slate-950 via-slate-900 to-transparent mt-10">
-      <div className="pt-10 pb-8 flex flex-col items-center justify-center gap-6 px-4 select-none">
+    <footer className="relative z-10 bg-gradient-to-t from-slate-950 via-slate-900 to-transparent mt-auto">
+      <div className="pt-8 sm:pt-10 pb-6 sm:pb-8 flex flex-col items-center justify-center gap-4 sm:gap-6 px-4 select-none">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1 }}
-          className="w-full max-w-lg h-[2px] bg-gradient-to-r from-transparent via-purple-500 to-transparent mb-4 animate-pulse"
+          className="w-full max-w-lg h-[2px] bg-gradient-to-r from-transparent via-purple-500 to-transparent mb-2 sm:mb-4 animate-pulse"
         />
 
         <motion.div

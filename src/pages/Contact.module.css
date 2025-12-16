@@ -16,15 +16,28 @@
   display: flex;
   align-items: center;        /* vertical center */
   justify-content: center;    /* horizontal center */
-  padding: 5rem 1.5rem;
+  padding: 6rem 1rem 2rem;    /* More top padding for navbar */
   position: relative;
   z-index: 10;
+}
+
+@media (min-width: 640px) {
+  .mainContent {
+    padding: 5rem 1.5rem;
+  }
 }
 
 .container {
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
+  padding: 0 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .container {
+    padding: 0;
+  }
 }
 
 /* ==================== */
@@ -283,17 +296,24 @@
   background: linear-gradient(145deg, rgba(20, 15, 40, 0.95) 0%, rgba(15, 25, 45, 0.9) 100%);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 150, 100, 0.15);
-  border-radius: 24px;
-  padding: 2rem;
+  border-radius: 16px;
+  padding: 1.25rem;
   position: relative;
   overflow: hidden;
-  min-width: 320px;
-  max-width: 550px;
   width: 100%;
+  max-width: 550px;
   box-shadow: 
     0 25px 80px rgba(0, 0, 0, 0.5),
     0 0 40px rgba(255, 100, 50, 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+@media (min-width: 640px) {
+  .formCard {
+    border-radius: 24px;
+    padding: 2rem;
+    min-width: 320px;
+  }
 }
 
 .formCard::before {
@@ -662,4 +682,66 @@
 
 @keyframes fadeUpAnim {
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==================== */
+/* Mobile Responsiveness */
+/* ==================== */
+@media (max-width: 768px) {
+  .cosmicCard {
+    padding: 1rem 0.75rem;
+    border-radius: 16px;
+  }
+  
+  .contactItem {
+    padding: 1rem;
+  }
+  
+  .iconPlanet {
+    width: 42px;
+    height: 42px;
+  }
+  
+  .socialPlanet {
+    width: 50px;
+    height: 50px;
+  }
+  
+  /* Hide floating planets on mobile */
+  .floatingPlanet {
+    display: none;
+  }
+  
+  /* Reduce nebula effects on mobile */
+  .nebula1, .nebula2, .nebula3 {
+    width: 200px;
+    height: 200px;
+    filter: blur(60px);
+    opacity: 0.25;
+  }
+  
+  .shootingStar {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .mainContent {
+    padding: 5rem 0.75rem 1.5rem;
+  }
+  
+  .formCard {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+  
+  .formInput, .cosmicInput {
+    padding: 0.75rem 1rem;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  .submitButton, .launchButton {
+    padding: 0.875rem 1.5rem;
+    font-size: 0.9rem;
+  }
 }
