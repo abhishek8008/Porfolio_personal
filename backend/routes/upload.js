@@ -326,4 +326,205 @@ router.post('/blog-attachment', authMiddleware, adminOnly, uploadAttachment.sing
   }
 });
 
+// ==================== PHOTO VAULT UPLOADS ====================
+
+// Configure multer for photo vault (larger files, multiple uploads)
+const photoUpload = multer({
+  storage,
+  limits: {
+    fileSize: 25 * 1024 * 1024 // 25MB limit per photo
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only images (JPEG, PNG, GIF, WebP, HEIC) are allowed.'));
+    }
+  }
+});
+
+// @route   POST /api/upload/photo
+// @desc    Upload single photo to Photo Vault
+// @access  Private (Admin only)
+router.post('/photo', authMiddleware, adminOnly, photoUpload.single('photo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const albumName = req.body.album_name || 'Uncategorized';
+    const folderPath = `portfolio/photos/${albumName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+    const result = await uploadToCloudinary(req.file.buffer, {
+      folder: folderPath,
+      resource_type: 'image',
+      transformation: [
+        { quality: 'auto:good' },
+        { fetch_format: 'auto' }
+      ]
+    });
+
+    // Generate thumbnail URL using Cloudinary transformations
+    const thumbnailUrl = cloudinary.url(result.public_id, {
+      transformation: [
+        { width: 400, height: 400, crop: 'fill', gravity: 'auto' },
+        { quality: 'auto:low' },
+        { fetch_format: 'auto' }
+      ]
+    });
+
+    res.json({
+      success: true,
+      message: 'Photo uploaded successfully',
+      data: {
+        url: result.secure_url,
+        public_id: result.public_id,
+        thumbnail_url: thumbnailUrl,
+        width: result.width,
+        height: result.height,
+        format: result.format,
+        bytes: result.bytes,
+        original_filename: req.file.originalname
+      }
+    });
+  } catch (error) {
+    console.error('Upload photo error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Upload failed' });
+  }
+});
+
+// @route   POST /api/upload/photos
+// @desc    Upload multiple photos to Photo Vault (up to 20 at a time)
+// @access  Private (Admin only)
+router.post('/photos', authMiddleware, adminOnly, photoUpload.array('photos', 20), async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ success: false, message: 'No files uploaded' });
+    }
+
+    const albumName = req.body.album_name || 'Uncategorized';
+    const folderPath = `portfolio/photos/${albumName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+    const uploadPromises = req.files.map(async (file) => {
+      try {
+        const result = await uploadToCloudinary(file.buffer, {
+          folder: folderPath,
+          resource_type: 'image',
+          transformation: [
+            { quality: 'auto:good' },
+            { fetch_format: 'auto' }
+          ]
+        });
+
+        // Generate thumbnail URL
+        const thumbnailUrl = cloudinary.url(result.public_id, {
+          transformation: [
+            { width: 400, height: 400, crop: 'fill', gravity: 'auto' },
+            { quality: 'auto:low' },
+            { fetch_format: 'auto' }
+          ]
+        });
+
+        return {
+          success: true,
+          url: result.secure_url,
+          public_id: result.public_id,
+          thumbnail_url: thumbnailUrl,
+          width: result.width,
+          height: result.height,
+          format: result.format,
+          bytes: result.bytes,
+          original_filename: file.originalname
+        };
+      } catch (err) {
+        return {
+          success: false,
+          original_filename: file.originalname,
+          error: err.message
+        };
+      }
+    });
+
+    const results = await Promise.all(uploadPromises);
+    const successful = results.filter(r => r.success);
+    const failed = results.filter(r => !r.success);
+
+    res.json({
+      success: true,
+      message: `${successful.length} photos uploaded successfully${failed.length > 0 ? `, ${failed.length} failed` : ''}`,
+      data: {
+        uploaded: successful,
+        failed: failed,
+        total: req.files.length,
+        successCount: successful.length,
+        failCount: failed.length
+      }
+    });
+  } catch (error) {
+    console.error('Upload photos error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Upload failed' });
+  }
+});
+
+// @route   DELETE /api/upload/photo/:publicId
+// @desc    Delete photo from Cloudinary
+// @access  Private (Admin only)
+router.delete('/photo/:publicId(*)', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { publicId } = req.params;
+
+    if (!publicId) {
+      return res.status(400).json({ success: false, message: 'Public ID is required' });
+    }
+
+    const result = await cloudinary.uploader.destroy(publicId);
+
+    if (result.result === 'ok') {
+      res.json({ success: true, message: 'Photo deleted from Cloudinary' });
+    } else {
+      res.json({ success: false, message: 'Photo not found in Cloudinary or already deleted' });
+    }
+  } catch (error) {
+    console.error('Delete photo from Cloudinary error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Delete failed' });
+  }
+});
+
+// @route   DELETE /api/upload/photos/bulk
+// @desc    Delete multiple photos from Cloudinary
+// @access  Private (Admin only)
+router.post('/photos/bulk-delete', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { public_ids } = req.body;
+
+    if (!public_ids || !Array.isArray(public_ids) || public_ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'Public IDs array is required' });
+    }
+
+    // Cloudinary allows deleting up to 100 resources at a time
+    const batchSize = 100;
+    const results = [];
+
+    for (let i = 0; i < public_ids.length; i += batchSize) {
+      const batch = public_ids.slice(i, i + batchSize);
+      const result = await cloudinary.api.delete_resources(batch);
+      results.push(result);
+    }
+
+    const totalDeleted = results.reduce((sum, r) => {
+      return sum + Object.values(r.deleted || {}).filter(v => v === 'deleted').length;
+    }, 0);
+
+    res.json({ 
+      success: true, 
+      message: `${totalDeleted} photos deleted from Cloudinary`,
+      totalDeleted
+    });
+  } catch (error) {
+    console.error('Bulk delete from Cloudinary error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Bulk delete failed' });
+  }
+});
+
 module.exports = router;

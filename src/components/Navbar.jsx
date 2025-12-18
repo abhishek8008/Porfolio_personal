@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Sun, Moon, Github, Linkedin, Mail } from "lucide-react";
+import { Menu, X, Sun, Moon, Github, Linkedin, Mail, Image } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 const navLinks = [
   { id: "home", label: "Home", path: "/" },
@@ -19,6 +20,7 @@ export default function Navbar() {
     localStorage.getItem("theme") || "dark"
   );
   const location = useLocation();
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -180,6 +182,31 @@ export default function Navbar() {
                   </NavLink>
                 </li>
               ))}
+              {/* Photos - Admin Only */}
+              {isAuthenticated && (
+                <li>
+                  <NavLink
+                    to="/photos"
+                    className={({ isActive }) =>
+                      `relative px-1 py-1 flex items-center gap-1.5 ${
+                        isActive ? "text-white" : "text-slate-300 hover:text-white"
+                      }`
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <Image size={14} />
+                        Photos
+                        <span
+                          className={`absolute inset-x-0 -bottom-1 mx-auto h-[2px] rounded-full 
+                          bg-gradient-to-r from-purple-400 via-pink-400 to-orange-300 transition-all duration-300
+                          ${isActive ? "w-full" : "w-0"}`}
+                        />
+                      </>
+                    )}
+                  </NavLink>
+                </li>
+              )}
             </ul>
 
             <div className="flex items-center gap-3">
@@ -252,6 +279,25 @@ export default function Navbar() {
                     </NavLink>
                   </motion.li>
                 ))}
+                {/* Photos - Admin Only */}
+                {isAuthenticated && (
+                  <motion.li variants={linkVariants}>
+                    <NavLink
+                      to="/photos"
+                      onClick={handleLinkClick}
+                      className={({ isActive }) =>
+                        `w-full text-center py-4 px-6 rounded-2xl text-xl font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
+                          isActive
+                            ? "bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-orange-400/20 text-white border border-purple-500/30"
+                            : "text-slate-300 hover:bg-white/5 hover:text-white"
+                        }`
+                      }
+                    >
+                      <Image size={20} />
+                      Photos
+                    </NavLink>
+                  </motion.li>
+                )}
               </ul>
             </nav>
           </div>

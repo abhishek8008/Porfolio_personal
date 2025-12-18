@@ -837,4 +837,457 @@ router.put('/blogs/:id/publish', async (req, res) => {
   }
 });
 
+// ==================== PHOTO VAULT ====================
+
+// @route   GET /api/admin/photos/albums
+// @desc    Get all albums
+router.get('/photos/albums', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT pa.*, 
+        p.thumbnail_url as cover_thumbnail,
+        p.url as cover_url
+      FROM photo_albums pa
+      LEFT JOIN photos p ON pa.cover_photo_id = p.id
+      ORDER BY pa.created_at DESC
+    `);
+    res.json({ success: true, albums: result.rows });
+  } catch (error) {
+    console.error('Get albums error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   POST /api/admin/photos/albums
+// @desc    Create album
+router.post('/photos/albums', async (req, res) => {
+  try {
+    const { name, description } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ success: false, message: 'Album name is required' });
+    }
+
+    const result = await db.query(`
+      INSERT INTO photo_albums (name, description)
+      VALUES ($1, $2)
+      RETURNING *
+    `, [name, description || null]);
+
+    res.json({ success: true, album: result.rows[0] });
+  } catch (error) {
+    console.error('Create album error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   PUT /api/admin/photos/albums/:id
+// @desc    Update album
+router.put('/photos/albums/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, cover_photo_id } = req.body;
+
+    const result = await db.query(`
+      UPDATE photo_albums SET
+        name = COALESCE($1, name),
+        description = COALESCE($2, description),
+        cover_photo_id = COALESCE($3, cover_photo_id),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $4
+      RETURNING *
+    `, [name, description, cover_photo_id, id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Album not found' });
+    }
+
+    res.json({ success: true, album: result.rows[0] });
+  } catch (error) {
+    console.error('Update album error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   DELETE /api/admin/photos/albums/:id
+// @desc    Delete album (photos will be moved to uncategorized)
+router.delete('/photos/albums/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Don't delete the uncategorized album
+    const album = await db.query('SELECT name FROM photo_albums WHERE id = $1', [id]);
+    if (album.rows[0]?.name === 'Uncategorized') {
+      return res.status(400).json({ success: false, message: 'Cannot delete the Uncategorized album' });
+    }
+
+    // Get uncategorized album id
+    const uncategorized = await db.query("SELECT id FROM photo_albums WHERE name = 'Uncategorized'");
+    const uncategorizedId = uncategorized.rows[0]?.id;
+
+    // Move photos to uncategorized
+    if (uncategorizedId) {
+      await db.query('UPDATE photos SET album_id = $1 WHERE album_id = $2', [uncategorizedId, id]);
+    }
+
+    // Delete album
+    await db.query('DELETE FROM photo_albums WHERE id = $1', [id]);
+
+    res.json({ success: true, message: 'Album deleted' });
+  } catch (error) {
+    console.error('Delete album error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   GET /api/admin/photos
+// @desc    Get photos with pagination
+router.get('/photos', async (req, res) => {
+  try {
+    const { 
+      album_id, 
+      page = 1, 
+      limit = 36, 
+      favorites_only = false,
+      search = ''
+    } = req.query;
+
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const params = [];
+    let whereClause = '';
+    let paramIndex = 1;
+
+    // Build WHERE clause
+    const conditions = [];
+
+    if (album_id && album_id !== 'all') {
+      conditions.push(`album_id = $${paramIndex}`);
+      params.push(parseInt(album_id));
+      paramIndex++;
+    }
+
+    if (favorites_only === 'true') {
+      conditions.push('is_favorite = true');
+    }
+
+    if (search) {
+      conditions.push(`(title ILIKE $${paramIndex} OR description ILIKE $${paramIndex} OR $${paramIndex + 1} = ANY(tags))`);
+      params.push(`%${search}%`, search.toLowerCase());
+      paramIndex += 2;
+    }
+
+    if (conditions.length > 0) {
+      whereClause = 'WHERE ' + conditions.join(' AND ');
+    }
+
+    // Get total count
+    const countQuery = `SELECT COUNT(*) FROM photos ${whereClause}`;
+    const countResult = await db.query(countQuery, params);
+    const totalPhotos = parseInt(countResult.rows[0].count);
+
+    // Get photos
+    const photosQuery = `
+      SELECT p.*, pa.name as album_name
+      FROM photos p
+      LEFT JOIN photo_albums pa ON p.album_id = pa.id
+      ${whereClause}
+      ORDER BY p.upload_date DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+    params.push(parseInt(limit), offset);
+
+    const result = await db.query(photosQuery, params);
+
+    res.json({
+      success: true,
+      photos: result.rows,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPhotos,
+        totalPages: Math.ceil(totalPhotos / parseInt(limit)),
+        hasMore: offset + result.rows.length < totalPhotos
+      }
+    });
+  } catch (error) {
+    console.error('Get photos error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   POST /api/admin/photos
+// @desc    Save photo metadata (after Cloudinary upload)
+router.post('/photos', async (req, res) => {
+  try {
+    const { 
+      url, 
+      public_id, 
+      thumbnail_url, 
+      album_id, 
+      title, 
+      description, 
+      width, 
+      height, 
+      file_size, 
+      format,
+      tags 
+    } = req.body;
+
+    if (!url || !public_id) {
+      return res.status(400).json({ success: false, message: 'URL and public_id are required' });
+    }
+
+    // Get default album if no album specified
+    let finalAlbumId = album_id;
+    if (!finalAlbumId) {
+      const defaultAlbum = await db.query("SELECT id FROM photo_albums WHERE name = 'Uncategorized'");
+      finalAlbumId = defaultAlbum.rows[0]?.id;
+    }
+
+    const result = await db.query(`
+      INSERT INTO photos (url, public_id, thumbnail_url, album_id, title, description, width, height, file_size, format, tags)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      RETURNING *
+    `, [url, public_id, thumbnail_url, finalAlbumId, title, description, width, height, file_size, format, tags || []]);
+
+    // Update album photo count
+    if (finalAlbumId) {
+      await db.query(`
+        UPDATE photo_albums SET 
+          photo_count = (SELECT COUNT(*) FROM photos WHERE album_id = $1),
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+      `, [finalAlbumId]);
+    }
+
+    res.json({ success: true, photo: result.rows[0] });
+  } catch (error) {
+    console.error('Save photo error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   POST /api/admin/photos/bulk
+// @desc    Save multiple photos metadata
+router.post('/photos/bulk', async (req, res) => {
+  try {
+    const { photos, album_id } = req.body;
+
+    if (!photos || !Array.isArray(photos) || photos.length === 0) {
+      return res.status(400).json({ success: false, message: 'Photos array is required' });
+    }
+
+    // Get default album if no album specified
+    let finalAlbumId = album_id;
+    if (!finalAlbumId) {
+      const defaultAlbum = await db.query("SELECT id FROM photo_albums WHERE name = 'Uncategorized'");
+      finalAlbumId = defaultAlbum.rows[0]?.id;
+    }
+
+    const savedPhotos = [];
+    for (const photo of photos) {
+      const result = await db.query(`
+        INSERT INTO photos (url, public_id, thumbnail_url, album_id, title, width, height, file_size, format)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING *
+      `, [
+        photo.url, 
+        photo.public_id, 
+        photo.thumbnail_url, 
+        finalAlbumId, 
+        photo.title || photo.original_filename,
+        photo.width,
+        photo.height,
+        photo.bytes,
+        photo.format
+      ]);
+      savedPhotos.push(result.rows[0]);
+    }
+
+    // Update album photo count
+    if (finalAlbumId) {
+      await db.query(`
+        UPDATE photo_albums SET 
+          photo_count = (SELECT COUNT(*) FROM photos WHERE album_id = $1),
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+      `, [finalAlbumId]);
+    }
+
+    res.json({ success: true, photos: savedPhotos, count: savedPhotos.length });
+  } catch (error) {
+    console.error('Bulk save photos error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   PUT /api/admin/photos/:id
+// @desc    Update photo metadata
+router.put('/photos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { album_id, title, description, tags, is_favorite } = req.body;
+
+    // Get current album to update counts
+    const currentPhoto = await db.query('SELECT album_id FROM photos WHERE id = $1', [id]);
+    const oldAlbumId = currentPhoto.rows[0]?.album_id;
+
+    const result = await db.query(`
+      UPDATE photos SET
+        album_id = COALESCE($1, album_id),
+        title = COALESCE($2, title),
+        description = COALESCE($3, description),
+        tags = COALESCE($4, tags),
+        is_favorite = COALESCE($5, is_favorite)
+      WHERE id = $6
+      RETURNING *
+    `, [album_id, title, description, tags, is_favorite, id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Photo not found' });
+    }
+
+    // Update album counts if album changed
+    if (album_id && album_id !== oldAlbumId) {
+      if (oldAlbumId) {
+        await db.query(`
+          UPDATE photo_albums SET photo_count = (SELECT COUNT(*) FROM photos WHERE album_id = $1)
+          WHERE id = $1
+        `, [oldAlbumId]);
+      }
+      await db.query(`
+        UPDATE photo_albums SET photo_count = (SELECT COUNT(*) FROM photos WHERE album_id = $1)
+        WHERE id = $1
+      `, [album_id]);
+    }
+
+    res.json({ success: true, photo: result.rows[0] });
+  } catch (error) {
+    console.error('Update photo error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   PUT /api/admin/photos/:id/favorite
+// @desc    Toggle favorite status
+router.put('/photos/:id/favorite', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await db.query(`
+      UPDATE photos SET is_favorite = NOT is_favorite
+      WHERE id = $1
+      RETURNING *
+    `, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Photo not found' });
+    }
+
+    res.json({ success: true, photo: result.rows[0] });
+  } catch (error) {
+    console.error('Toggle favorite error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   DELETE /api/admin/photos/:id
+// @desc    Delete photo (metadata only - Cloudinary deletion handled separately)
+router.delete('/photos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const photo = await db.query('SELECT * FROM photos WHERE id = $1', [id]);
+    if (photo.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Photo not found' });
+    }
+
+    const albumId = photo.rows[0].album_id;
+    const publicId = photo.rows[0].public_id;
+
+    await db.query('DELETE FROM photos WHERE id = $1', [id]);
+
+    // Update album count
+    if (albumId) {
+      await db.query(`
+        UPDATE photo_albums SET photo_count = (SELECT COUNT(*) FROM photos WHERE album_id = $1)
+        WHERE id = $1
+      `, [albumId]);
+    }
+
+    res.json({ success: true, message: 'Photo deleted', public_id: publicId });
+  } catch (error) {
+    console.error('Delete photo error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   DELETE /api/admin/photos/bulk
+// @desc    Delete multiple photos
+router.delete('/photos/bulk', async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'Photo IDs are required' });
+    }
+
+    // Get public_ids for Cloudinary deletion
+    const photos = await db.query(
+      'SELECT public_id, album_id FROM photos WHERE id = ANY($1)',
+      [ids]
+    );
+
+    const publicIds = photos.rows.map(p => p.public_id);
+    const albumIds = [...new Set(photos.rows.map(p => p.album_id).filter(Boolean))];
+
+    // Delete photos
+    await db.query('DELETE FROM photos WHERE id = ANY($1)', [ids]);
+
+    // Update album counts
+    for (const albumId of albumIds) {
+      await db.query(`
+        UPDATE photo_albums SET photo_count = (SELECT COUNT(*) FROM photos WHERE album_id = $1)
+        WHERE id = $1
+      `, [albumId]);
+    }
+
+    res.json({ 
+      success: true, 
+      message: `${ids.length} photos deleted`, 
+      public_ids: publicIds 
+    });
+  } catch (error) {
+    console.error('Bulk delete photos error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   GET /api/admin/photos/stats
+// @desc    Get photo vault statistics
+router.get('/photos/stats', async (req, res) => {
+  try {
+    const [totalPhotos, totalAlbums, favorites, storage] = await Promise.all([
+      db.query('SELECT COUNT(*) FROM photos'),
+      db.query('SELECT COUNT(*) FROM photo_albums'),
+      db.query('SELECT COUNT(*) FROM photos WHERE is_favorite = true'),
+      db.query('SELECT COALESCE(SUM(file_size), 0) as total_size FROM photos')
+    ]);
+
+    res.json({
+      success: true,
+      stats: {
+        totalPhotos: parseInt(totalPhotos.rows[0].count),
+        totalAlbums: parseInt(totalAlbums.rows[0].count),
+        favorites: parseInt(favorites.rows[0].count),
+        totalStorageBytes: parseInt(storage.rows[0].total_size),
+        totalStorageMB: (parseInt(storage.rows[0].total_size) / (1024 * 1024)).toFixed(2)
+      }
+    });
+  } catch (error) {
+    console.error('Get photo stats error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 module.exports = router;

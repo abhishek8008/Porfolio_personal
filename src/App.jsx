@@ -7,6 +7,7 @@ import Contact from './pages/Contact';
 import Skills from './pages/Skills';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
+import Photos from './pages/Photos';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -18,6 +19,7 @@ import SkillsManager from './pages/admin/SkillsManager';
 import EducationManager from './pages/admin/EducationManager';
 import MessagesManager from './pages/admin/MessagesManager';
 import BlogManager from './pages/admin/BlogManager';
+import PhotoVault from './pages/admin/PhotoVault';
 import { Mail, BarChart3 } from 'lucide-react';
 
 // Protected Route wrapper
@@ -51,6 +53,9 @@ function AppContent() {
       <Route path="/blog" element={<Layout><Blog /></Layout>} />
       <Route path="/blog/:slug" element={<Layout><BlogPost /></Layout>} />
       
+      {/* Photos - Admin Only (within Layout for navbar) */}
+      <Route path="/photos" element={<Layout><Photos /></Layout>} />
+      
       {/* Admin Routes */}
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route
@@ -70,6 +75,7 @@ function AppContent() {
         <Route path="education" element={<EducationManager />} />
         <Route path="messages" element={<MessagesManager />} />
         <Route path="blog" element={<BlogManager />} />
+        <Route path="photos" element={<PhotoVault />} />
         <Route path="stats" element={<StatsManager />} />
       </Route>
     </Routes>

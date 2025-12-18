@@ -312,4 +312,156 @@ export const blogAPI = {
   }),
 };
 
-export default { authAPI, adminAPI, publicAPI, uploadAPI, blogAPI };
+// ==================== PHOTO VAULT API ====================
+export const photoVaultAPI = {
+  // Albums
+  getAlbums: () => apiCall('/admin/photos/albums'),
+  
+  createAlbum: (data) => apiCall('/admin/photos/albums', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  
+  updateAlbum: (id, data) => apiCall(`/admin/photos/albums/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  
+  deleteAlbum: (id) => apiCall(`/admin/photos/albums/${id}`, {
+    method: 'DELETE',
+  }),
+
+  // Photos
+  getPhotos: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiCall(`/admin/photos${query ? `?${query}` : ''}`);
+  },
+  
+  savePhoto: (data) => apiCall('/admin/photos', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  
+  savePhotosBulk: (photos, album_id) => apiCall('/admin/photos/bulk', {
+    method: 'POST',
+    body: JSON.stringify({ photos, album_id }),
+  }),
+  
+  updatePhoto: (id, data) => apiCall(`/admin/photos/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  
+  toggleFavorite: (id) => apiCall(`/admin/photos/${id}/favorite`, {
+    method: 'PUT',
+  }),
+  
+  deletePhoto: (id) => apiCall(`/admin/photos/${id}`, {
+    method: 'DELETE',
+  }),
+  
+  deletePhotosBulk: (ids) => apiCall('/admin/photos/bulk', {
+    method: 'DELETE',
+    body: JSON.stringify({ ids }),
+  }),
+  
+  getStats: () => apiCall('/admin/photos/stats'),
+
+  // Upload methods
+  uploadPhoto: async (file, albumName = 'Uncategorized') => {
+    const formData = new FormData();
+    formData.append('photo', file);
+    formData.append('album_name', albumName);
+
+    const token = localStorage.getItem('adminToken');
+    const response = await fetch(`${API_BASE_URL}/upload/photo`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: 'include',
+      body: formData,
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message);
+    return data;
+  },
+
+  uploadPhotos: async (files, albumName = 'Uncategorized', onProgress) => {
+    const formData = new FormData();
+    for (const file of files) {
+      formData.append('photos', file);
+    }
+    formData.append('album_name', albumName);
+
+    const token = localStorage.getItem('adminToken');
+    
+    // Use XMLHttpRequest for progress tracking
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable && onProgress) {
+          const percent = Math.round((e.loaded / e.total) * 100);
+          onProgress(percent);
+        }
+      });
+      
+      xhr.addEventListener('load', () => {
+        try {
+          const data = JSON.parse(xhr.responseText);
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(data);
+          } else {
+            reject(new Error(data.message || 'Upload failed'));
+          }
+        } catch (e) {
+          reject(new Error('Invalid response'));
+        }
+      });
+      
+      xhr.addEventListener('error', () => reject(new Error('Network error')));
+      xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+      
+      xhr.open('POST', `${API_BASE_URL}/upload/photos`);
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.withCredentials = true;
+      xhr.send(formData);
+    });
+  },
+
+  deleteFromCloudinary: async (publicId) => {
+    const token = localStorage.getItem('adminToken');
+    const response = await fetch(`${API_BASE_URL}/upload/photo/${encodeURIComponent(publicId)}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: 'include',
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message);
+    return data;
+  },
+
+  bulkDeleteFromCloudinary: async (publicIds) => {
+    const token = localStorage.getItem('adminToken');
+    const response = await fetch(`${API_BASE_URL}/upload/photos/bulk-delete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: 'include',
+      body: JSON.stringify({ public_ids: publicIds }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message);
+    return data;
+  },
+};
+
+export default { authAPI, adminAPI, publicAPI, uploadAPI, blogAPI, photoVaultAPI };

@@ -14,7 +14,8 @@ import {
   X,
   Settings,
   ExternalLink,
-  FileText
+  FileText,
+  Image
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import styles from './AdminDashboard.module.css';
@@ -27,6 +28,7 @@ const navItems = [
   { path: '/admin/certificates', icon: Award, label: 'Certificates' },
   { path: '/admin/education', icon: GraduationCap, label: 'Education' },
   { path: '/admin/blog', icon: FileText, label: 'Blog' },
+  { path: '/admin/photos', icon: Image, label: 'Photo Vault' },
   { path: '/admin/messages', icon: Mail, label: 'Messages' },
   { path: '/admin/stats', icon: BarChart3, label: 'Analytics' },
 ];
